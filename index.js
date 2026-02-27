@@ -19,8 +19,8 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const TOKEN = process.env.TOKEN || "SEU_TOKEN_AQUI";
-const CARGO_VERIFICADO = "ID_DO_CARGO_VERIFICADO";
+const TOKEN = process.env.TOKEN;
+const CARGO_VERIFICADO = "1476714100804554862";
 
 // =============================
 // 🔹 Verifica se usuário está acima do bot
@@ -109,3 +109,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.login(TOKEN);
+
