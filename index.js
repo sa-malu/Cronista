@@ -83,6 +83,7 @@ client.once("ready", () => {
 // 🗝️ COMANDOS: !singularidade e !escrituras
 // =============================
 client.on("messageCreate", async (message) => {
+  console.log("RECEBI:", message.content, "CANAL:", message.channel?.id, "AUTOR:", message.author?.tag);
   if (message.author.bot) return;
   if (!message.guild) return;
 
@@ -282,3 +283,4 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
 // 🚀 LOGIN
 // =============================
 client.login(TOKEN);
+
