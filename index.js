@@ -5,9 +5,13 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  Events
+  Events,
+  EmbedBuilder
 } = require("discord.js");
 
+// =============================
+// 🔧 CLIENT
+// =============================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,16 +24,40 @@ const client = new Client({
 });
 
 // =============================
-// 🔧 CONFIG
+// 🔧 CONFIG (troque os IDs)
 // =============================
-const TOKEN = process.env.TOKEN;
+const TOKEN = process.env.TOKEN; // Railway: Variables -> TOKEN
 const CARGO_VERIFICADO = "1476714100804554862";
-const CANAL_LOG = "1476725674403172515";
+// Canal onde o Cronista escreve após atravessar (seu “Véu/boas-vindas”)
 const CANAL_BOAS_VINDAS = "1476710153016578171";
-const CANAL_VEU = CANAL_BOAS_VINDAS;
+// Canal de logs (história / registros)
+const CANAL_LOG = "1476725674403172515";
 
 // =============================
-// 📜 FRASES DO VÉU (após atravessar)
+// 🧰 HELPERS
+// =============================
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const fmt = (template, userTag) => template.replaceAll("{user}", userTag);
+
+async function getChannelSafe(guild, channelId) {
+  try {
+    return await guild.channels.fetch(channelId);
+  } catch (err) {
+    console.error("Falha ao buscar canal:", channelId, err);
+    return null;
+  }
+}
+
+// Logs de erros pra não “sumir” no Railway
+process.on("unhandledRejection", (err) => console.error("unhandledRejection:", err));
+process.on("uncaughtException", (err) => console.error("uncaughtException:", err));
+
+if (!TOKEN) {
+  console.error("TOKEN não encontrado nas variáveis de ambiente (Railway -> Variables -> TOKEN).");
+}
+
+// =============================
+// 📜 FRASES (após atravessar)
 // =============================
 const mensagensAposAtravessar = [
   `🌌 O Véu foi rasgado. **{user}** agora existe nesta história.`,
@@ -44,14 +72,6 @@ const mensagensAposAtravessar = [
   `🌓 O Cronista não interfere… exceto por este instante. Bem-vindo(a), **{user}**.`
 ];
 
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function fmt(template, userTag) {
-  return template.replaceAll("{user}", userTag);
-}
-
 // =============================
 // ✅ READY
 // =============================
@@ -60,14 +80,26 @@ client.once("ready", () => {
 });
 
 // =============================
-// 🌌 SINGULARIDADE (mensagem única)
+// 🗝️ COMANDOS: !singularidade e !escrituras
 // =============================
-// Digite !singularidade no canal #singularidade (uma vez)
-// O bot posta o portal e apaga o comando
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+  if (!message.guild) return;
 
+  // ========== !singularidade (Portal) ==========
   if (message.content === "!singularidade") {
+    await message.delete().catch(() => {});
+
+    // Evita duplicar: procura se já existe uma mensagem do bot com esse botão no canal
+    const recentes = await message.channel.messages.fetch({ limit: 50 }).catch(() => null);
+    if (recentes) {
+      const jaExiste = recentes.some(m =>
+        m.author.id === client.user.id &&
+        m.components?.[0]?.components?.some(c => c.customId === "atravessar_veu")
+      );
+      if (jaExiste) return;
+    }
+
     const botao = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("atravessar_veu")
@@ -88,7 +120,57 @@ Toque o selo abaixo e atravesse.`,
       components: [botao]
     });
 
+    return;
+  }
+
+  // ========== !escrituras (Regras em Embed) ==========
+  if (message.content === "!escrituras") {
     await message.delete().catch(() => {});
+
+    // Evita duplicar mesmo após reinício
+    const recentes = await message.channel.messages.fetch({ limit: 50 }).catch(() => null);
+    if (recentes) {
+      const jaExiste = recentes.some(m =>
+        m.author.id === client.user.id &&
+        m.embeds?.[0]?.title === "✦ EDICTUM DO ASTRARIUM ✦"
+      );
+      if (jaExiste) return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle("✦ EDICTUM DO ASTRARIUM ✦")
+      .setDescription("Ao atravessar o Véu, você aceita estas Leis.")
+      .addFields(
+        {
+          name: "I. Da Convivência",
+          value: "Respeite aqueles que compartilham a Trama com você.\nAtaques pessoais, preconceito ou assédio não serão tolerados."
+        },
+        {
+          name: "II. Do Conteúdo",
+          value: "Nada ilegal, explícito extremo ou que comprometa a estabilidade do ambiente.\nO mundo deve permanecer habitável."
+        },
+        {
+          name: "III. Da Ordem",
+          value: "Evite spam, flood ou perturbações desnecessárias.\nCada espaço possui sua função — use-os corretamente."
+        },
+        {
+          name: "IV. Das Interferências",
+          value: "Divulgação de outros domínios apenas com permissão.\nInterferências indevidas serão contidas."
+        },
+        {
+          name: "V. Da Autoridade",
+          value: "Constelações e Arquitetos zelam pela estabilidade da Trama.\nSuas decisões visam manter o equilíbrio do mundo."
+        },
+        {
+          name: "VI. Do Bom Senso",
+          value: "Se algo ameaça a harmonia do Astrarium, não o faça.\nA Singularidade desperta, mas também exige responsabilidade."
+        }
+      )
+      .setFooter({ text: "O Véu separa mundos. Quem o atravessa, aceita suas Leis." });
+
+    await message.channel.send({ embeds: [embed] });
+
+    return;
   }
 });
 
@@ -100,54 +182,56 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.customId !== "atravessar_veu") return;
   if (!interaction.inGuild()) return;
 
-  // evita "This interaction failed"
+  // Evita “This interaction failed” sem mandar mensagem privada
   await interaction.deferUpdate().catch(() => {});
 
-  // Já atravessou?
+  // Se já tem cargo, não faz nada
   if (interaction.member.roles.cache.has(CARGO_VERIFICADO)) return;
 
   // Dá o cargo
   await interaction.member.roles.add(CARGO_VERIFICADO).catch(console.error);
 
-  // Mensagem no canal do Véu / boas-vindas (após atravessar)
-  try {
-    const canalVeu = await interaction.guild.channels.fetch(CANAL_BOAS_VINDAS);
-    await canalVeu.send(
-      fmt(pick(mensagensAposAtravessar), interaction.user.tag)
-    );
-  } catch (err) {
-    console.error("Falha ao enviar no canal do Véu:", err);
+  // Mensagem no Véu/boas-vindas APÓS atravessar
+  const canalVeu = await getChannelSafe(interaction.guild, CANAL_BOAS_VINDAS);
+  if (canalVeu) {
+    try {
+      await canalVeu.send(fmt(pick(mensagensAposAtravessar), interaction.user.tag));
+    } catch (err) {
+      console.error("Falha ao enviar no canal do Véu:", err);
+    }
   }
 
-  // Log (opcional)
-  const canalLog = await interaction.guild.channels.fetch(CANAL_LOG).catch(() => null);
-  if (canalLog) canalLog.send(`✦ ${interaction.user.tag} atravessou o Véu.`);
+  // Log opcional
+  const canalLog = await getChannelSafe(interaction.guild, CANAL_LOG);
+  if (canalLog) {
+    canalLog.send(`✦ ${interaction.user.tag} atravessou o Véu.`);
+  }
 });
 
 // =============================
-// 📜 LOGS BÁSICOS (sem mensagem ao entrar)
+// 📜 LOGS
 // =============================
-
-client.on("guildMemberAdd", (member) => {
-  const canal = member.guild.channels.cache.get(CANAL_LOG);
-  if (canal) canal.send(`🟢 ${member.user.tag} entrou no servidor.`);
+client.on("guildMemberAdd", async (member) => {
+  const canalLog = await getChannelSafe(member.guild, CANAL_LOG);
+  if (canalLog) canalLog.send(`🟢 ${member.user.tag} entrou no servidor.`);
 });
 
-client.on("guildMemberRemove", (member) => {
-  const canal = member.guild.channels.cache.get(CANAL_LOG);
-  if (canal) canal.send(`🔴 ${member.user.tag} saiu do servidor.`);
+client.on("guildMemberRemove", async (member) => {
+  const canalLog = await getChannelSafe(member.guild, CANAL_LOG);
+  if (canalLog) canalLog.send(`🔴 ${member.user.tag} saiu do servidor.`);
 });
 
-client.on("voiceStateUpdate", (oldState, newState) => {
-  const canal = newState.guild.channels.cache.get(CANAL_LOG);
-  if (!canal) return;
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  const guild = newState.guild || oldState.guild;
+  const canalLog = await getChannelSafe(guild, CANAL_LOG);
+  if (!canalLog) return;
 
   if (!oldState.channel && newState.channel) {
-    canal.send(`🎙️ ${newState.member.user.tag} entrou em **${newState.channel.name}**.`);
+    canalLog.send(`🎙️ ${newState.member.user.tag} entrou em **${newState.channel.name}**.`);
   }
 
   if (oldState.channel && !newState.channel) {
-    canal.send(`📞 ${oldState.member.user.tag} saiu de call.`);
+    canalLog.send(`📞 ${oldState.member.user.tag} saiu de call.`);
   }
 });
 
@@ -155,25 +239,25 @@ client.on("messageDelete", async (message) => {
   if (!message.guild) return;
   if (message.author?.bot) return;
 
-  const canal = message.guild.channels.cache.get(CANAL_LOG);
-  if (!canal) return;
+  const canalLog = await getChannelSafe(message.guild, CANAL_LOG);
+  if (!canalLog) return;
 
   const conteudo = message.content?.trim()
     ? message.content
     : "*Mensagem sem conteúdo (ou embed/anexo)*";
 
-  canal.send(`🕯️ Mensagem apagada de **${message.author.tag}**:\n> ${conteudo}`);
+  canalLog.send(`🕯️ Mensagem apagada de **${message.author.tag}**:\n> ${conteudo}`);
 });
 
 client.on("messageUpdate", async (oldMessage, newMessage) => {
   if (!oldMessage.guild) return;
   if (oldMessage.author?.bot) return;
 
-  const canal = oldMessage.guild.channels.cache.get(CANAL_LOG);
-  if (!canal) return;
-
-  // Se não mudou o conteúdo, ignora
+  // Às vezes o Discord manda update sem conteúdo mudar
   if (oldMessage.content === newMessage.content) return;
+
+  const canalLog = await getChannelSafe(oldMessage.guild, CANAL_LOG);
+  if (!canalLog) return;
 
   const antes = oldMessage.content?.trim()
     ? oldMessage.content
@@ -183,7 +267,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     ? newMessage.content
     : "*Sem conteúdo textual*";
 
-  canal.send(
+  canalLog.send(
 `✏️ Um fragmento foi reescrito por **${oldMessage.author.tag}**
 
 📝 Antes:
@@ -194,4 +278,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
   );
 });
 
+// =============================
+// 🚀 LOGIN
+// =============================
 client.login(TOKEN);
