@@ -13,6 +13,13 @@ module.exports = function registerMessageLogs(client) {
   });
 
   client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    console.log("✏️ UPDATE EVENT", {
+      guild: !!newMessage.guild,
+      channelId: newMessage.channelId,
+      authorId: newMessage.author?.id,
+      oldPartial: oldMessage.partial,
+      newPartial: newMessage.partial
+    });
     if (!newMessage.guild) return;
     if (newMessage.author?.bot) return;
 
@@ -42,6 +49,12 @@ module.exports = function registerMessageLogs(client) {
   });
 
   client.on(Events.MessageDelete, async (message) => {
+    console.log("🗑️ DELETE EVENT", {
+      guild: !!message.guild,
+      channelId: message.channelId,
+      authorId: message.author?.id,
+      partial: message.partial
+    });
     if (!message.guild) return;
     if (message.author?.bot) return;
 
