@@ -1,7 +1,11 @@
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const { TOKEN } = require("./config");
 
-const registerPunishments = require("./handlers/punishments");
+const registerSingularidade = require("./handlers/singularidade");
+const registerEscrituras = require("./handlers/escrituras");
+const registerMessageLogs = require("./handlers/messageLogs");
+const registerVoiceLogs = require("./handlers/voiceLogs");
+const registerPunishmentsSenescal = require("./handlers/punishmentsSenescal");
 const registerWarnsFeed = require("./handlers/warnsFeed");
 
 const client = new Client({
@@ -19,8 +23,12 @@ client.once("ready", () => {
   console.log(`📜 Cronista online como ${client.user.tag}`);
 });
 
-// 🔹 Registrar módulos
-registerPunishments(client);
+// handlers
+registerSingularidade(client);
+registerEscrituras(client);
+registerMessageLogs(client);
+registerVoiceLogs(client);
+registerPunishmentsSenescal(client);
 registerWarnsFeed(client);
 
 client.login(TOKEN);
