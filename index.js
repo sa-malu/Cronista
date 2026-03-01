@@ -42,6 +42,7 @@ client.once("ready", () => {
 // =============================
 const MSG_CACHE_MAX = 2000; // ajusta se quiser
 const msgCache = new Map(); // messageId -> { content, authorId, authorTag, channelId, createdAt, attachments[] }
+const callTimes = new Map(); 
 
 function cacheMessage(message) {
   if (!message?.id || !message.guildId) return;
@@ -323,6 +324,17 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 // =============================
 // 🔹 Log: Voz (entrar/sair/mover, mute/deafen, cam/stream, server mute/deafen)
 // =============================
+// 🔹 Formatar o tempo
+function formatDuration(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const s = total % 60;
+  const m = Math.floor(total / 60) % 60;
+  const h = Math.floor(total / 3600);
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+// =============================
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   const guild = newState.guild;
   if (!guild) return;
@@ -337,6 +349,28 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
   // 1) Entrou / saiu / moveu
   if (oldChannel !== newChannel) {
+    // entrou em call
+    if (!oldChannel && newChannel) {
+      callTimes.set(member.id, { joinedAt: Date.now(), lastChannelId: newChannel });
+    }
+
+    // moveu de canal (mantém o mesmo joinedAt)
+    if (oldChannel && newChannel && oldChannel !== newChannel) {
+      const data = callTimes.get(member.id);
+      if (data) data.lastChannelId = newChannel;
+      else callTimes.set(member.id, { joinedAt: Date.now(), lastChannelId: newChannel }); // fallback
+    }
+
+    // saiu da call (calcula duração)
+    let tempoCall = null;
+    if (oldChannel && !newChannel) {
+      const data = callTimes.get(member.id);
+      if (data?.joinedAt) {
+        tempoCall = formatDuration(Date.now() - data.joinedAt);
+      }
+      callTimes.delete(member.id);
+    }
+
     const embed = new EmbedBuilder()
       .setColor("#111111")
       .setTitle("🔊 Registro: Movimento em Voz")
@@ -348,13 +382,19 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       embed.addFields({ name: "Ação", value: `Entrou em <#${newChannel}>`, inline: false });
     } else if (oldChannel && !newChannel) {
       embed.addFields({ name: "Ação", value: `Saiu de <#${oldChannel}>`, inline: false });
+
+      // aqui entra o cálculo do tempo
+      embed.addFields({
+        name: "Tempo em call",
+        value: tempoCall ? `**${tempoCall}**` : "*Indisponível (bot reiniciou ou entrada não foi registrada).*",
+        inline: false
+      });
     } else if (oldChannel && newChannel) {
       embed.addFields({ name: "Ação", value: `Moveu de <#${oldChannel}> para <#${newChannel}>`, inline: false });
     }
 
     await sendLog(guild, embed);
   }
-
   // helpers (nem todo campo existe em todo ambiente, então protegemos)
   const oldSelfMute = !!oldState.selfMute;
   const newSelfMute = !!newState.selfMute;
@@ -441,6 +481,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 });
 
 client.login(TOKEN);
+
 
 
 
