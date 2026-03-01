@@ -1,3 +1,5 @@
+console.log("✅ messageLogs handler carregado");
+
 const { Events, EmbedBuilder, AuditLogEvent } = require("discord.js");
 const { cacheMessage, getCached } = require("../utils/cache");
 const { sendLog } = require("../utils/send");
