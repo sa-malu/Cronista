@@ -7,7 +7,7 @@ const {
   ButtonStyle,
   Events,
   EmbedBuilder,
-  AuditLogEvent
+  AuditLogEvent,
 } = require("discord.js");
 
 const client = new Client({
@@ -15,7 +15,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates
   ],
   partials: [Partials.Channel]
 });
@@ -440,6 +441,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 });
 
 client.login(TOKEN);
+
 
 
 
