@@ -1,0 +1,7 @@
+module.exports = {
+  TOKEN: process.env.TOKEN,
+  LOG_CHANNEL_ID: process.env.LOG_CHANNEL_ID,
+  PUNISH_LOG_CHANNEL_ID: process.env.PUNISH_LOG_CHANNEL_ID,
+  SENESCAL_ID: process.env.SENESCAL_ID,
+  SENESCAL_FEED_CHANNEL_ID: process.env.SENESCAL_FEED_CHANNEL_ID,
+};
