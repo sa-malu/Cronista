@@ -246,7 +246,7 @@ client.on(Events.MessageDelete, async (message) => {
   const deletedBySelf = executor?.executorId ? executor.executorId === authorId : true;
 
   const embed = new EmbedBuilder()
-    .setColor("#1f1f1f")
+    .setColor("#8B0000")
     .setTitle("🕯️ Registro: Mensagem Excluída")
     .addFields(
       { name: "Canal", value: `<#${message.channelId}>`, inline: true },
@@ -301,7 +301,7 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
   if (before === after) return;
 
   const embed = new EmbedBuilder()
-    .setColor("#2b2b2b")
+    .setColor("#C27C0E")
     .setTitle("✒️ Registro: Mensagem Editada")
     .addFields(
       { name: "Canal", value: `<#${newMessage.channelId}>`, inline: true },
@@ -372,7 +372,13 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     }
 
     const embed = new EmbedBuilder()
-      .setColor("#111111")
+      let cor = "#111111";
+
+      if (!oldChannel && newChannel) cor = "#1E8E3E"; // entrou
+      else if (oldChannel && !newChannel) cor = "#5B2C83"; // saiu
+      else if (oldChannel && newChannel) cor = "#1B4F72"; // moveu
+      .setColor(cor)
+      
       .setTitle("🔊 Registro: Movimento em Voz")
       .addFields({ name: "Usuário", value: userLine, inline: false })
       .setTimestamp()
@@ -441,7 +447,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const executor = await findAuditExecutor(guild, AuditLogEvent.MemberUpdate, member.id).catch(() => null);
 
     const embed = new EmbedBuilder()
-      .setColor("#0f0f0f")
+      .setColor("#111111")
       .setTitle("🛡️ Registro: Moderação em Voz")
       .addFields(
         { name: "Alvo", value: userLine, inline: false },
@@ -467,7 +473,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     if (oldStream !== newStream) changes.push(`Transmissão: **${newStream ? "iniciada" : "encerrada"}**`);
 
     const embed = new EmbedBuilder()
-      .setColor("#141414")
+      .setColor("#8E2A5A")
       .setTitle("📷 Registro: Vídeo/Transmissão")
       .addFields(
         { name: "Usuário", value: userLine, inline: false },
@@ -481,6 +487,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 });
 
 client.login(TOKEN);
+
 
 
 
