@@ -27,7 +27,6 @@ const CARGO_VERIFICADO = "1476714100804554862";
 // =============================
 function isAboveBot(member, botMember) {
   if (member.id === member.guild.ownerId) return true;
-
   return member.roles.highest.position > botMember.roles.highest.position;
 }
 
@@ -36,16 +35,72 @@ client.once("ready", () => {
 });
 
 // =============================
-// 🔹 Comando !singularidade
+// 🔹 Comandos por mensagem
 // =============================
 client.on("messageCreate", async (message) => {
   if (!message.guild) return;
   if (message.author.bot) return;
 
-  const content = message.content.trim().toLowerCase();
-  if (content !== "!singularidade") return;
+  const content = message.content.trim();
+  const lower = content.toLowerCase();
 
   const botMember = message.guild.members.me;
+  if (!botMember) return;
+
+  // =====================================================
+  // 📜 Comando !escrituras (postar regras em embed)
+  // =====================================================
+  if (lower === "!escrituras") {
+    // Permissão: apenas acima do bot (igual você queria)
+    if (!isAboveBot(message.member, botMember)) {
+      return; // não apaga, só ignora
+    }
+
+    const regrasEmbed = new EmbedBuilder()
+      .setColor("#111111")
+      .setTitle("📜 ESCRITURAS — Regras da Comunidade")
+      .setDescription(
+        [
+          "**I. Respeito é lei**",
+          "• Sem ofensas, assédio, discriminação ou humilhação.",
+          "• Debates são permitidos; ataques pessoais não.",
+          "",
+          "**II. Sem caos desnecessário**",
+          "• Sem spam, flood, copypasta repetida ou provocação só pra arrumar briga.",
+          "• Evite caps lock e @menções em excesso.",
+          "",
+          "**III. Conteúdo permitido**",
+          "• Nada de conteúdo sexual explícito, gore ou qualquer coisa ilegal.",
+          "• Sem golpes, links suspeitos ou “downloads mágicos”.",
+          "",
+          "**IV. Convivência**",
+          "• Não exponha dados pessoais (seus ou de terceiros).",
+          "• Se alguém pedir para parar, pare.",
+          "",
+          "**V. Moderação**",
+          "• A equipe pode apagar mensagens, aplicar timeout, kick ou ban quando necessário.",
+          "• Burlar punições (alt/conta secundária) piora a penalidade.",
+          "",
+          "**VI. Canais e temas**",
+          "• Use cada canal para o assunto certo.",
+          "• Se não souber onde postar, pergunte.",
+          "",
+          "**📌 Observação**",
+          "A **Margem** registra o que carrega intenção.",
+          "Seja alguém que deixa um rastro bom.",
+        ].join("\n")
+      )
+      .setFooter({ text: "Margem da Realidade • Registro Imutável — Cronista" })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [regrasEmbed] });
+    return;
+  }
+
+  // =====================================================
+  // ✦ Comando !singularidade (o seu original)
+  // =====================================================
+  if (lower !== "!singularidade") return;
 
   if (!isAboveBot(message.member, botMember)) {
     await message.delete().catch(() => {});
@@ -108,63 +163,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   await interaction.member.roles.add(CARGO_VERIFICADO).catch(console.error);
 });
 
-// =============================
-// 🔹 Comando !escritruas
-// =============================
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
-
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
-
-  if (command === "escrituras") {
-
-    // Permissão: apenas Administrador
-    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-      return message.reply("Você não tem permissão para invocar o Cronista.");
-    }
-
-    const regrasEmbed = new EmbedBuilder()
-      .setColor(0x5B2C83) // roxo singularidade
-      .setTitle("📜 ESCRITURAS — Regras da Comunidade")
-      .setDescription(
-        [
-          "**I. Respeito é lei**",
-          "• Sem ofensas, assédio, discriminação ou humilhação.",
-          "• Debates são permitidos; ataques pessoais não.",
-          "",
-          "**II. Sem caos desnecessário**",
-          "• Sem spam, flood ou provocações.",
-          "• Evite caps lock e @menções excessivas.",
-          "",
-          "**III. Conteúdo permitido**",
-          "• Nada de conteúdo sexual explícito, gore ou ilegal.",
-          "• Sem golpes ou links suspeitos.",
-          "",
-          "**IV. Convivência**",
-          "• Não exponha dados pessoais.",
-          "• Respeite limites individuais.",
-          "",
-          "**V. Moderação**",
-          "• A equipe pode aplicar timeout, kick ou ban quando necessário.",
-          "• Burlar punições resultará em penalidades maiores.",
-          "",
-          "**VI. Canais e temas**",
-          "• Use cada canal corretamente.",
-          "",
-          "**📌 Observação**",
-          "A **Margem** registra o que carrega intenção.",
-          "Seja alguém que deixa um rastro digno de memória."
-        ].join("\n")
-      )
-      .setFooter({ text: "Margem da Realidade • Registro Imutável — Cronista" })
-      .setTimestamp();
-
-    await message.channel.send({ embeds: [regrasEmbed] });
-  }
-});
-
 client.login(TOKEN);
+
 
 
