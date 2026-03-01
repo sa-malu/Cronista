@@ -2,6 +2,7 @@ module.exports = {
   TOKEN: process.env.TOKEN,
 
   CARGO_VERIFICADO: process.env.CARGO_VERIFICADO || "1476714100804554862",
+  VEU_CHANNEL_ID: process.env.VEU_CHANNEL_ID,
 
   LOG_CHANNEL_ID: process.env.LOG_CHANNEL_ID, // geral
   VOICE_LOG_CHANNEL_ID: process.env.VOICE_LOG_CHANNEL_ID || null, // opcional
