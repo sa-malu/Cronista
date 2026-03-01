@@ -1,3 +1,5 @@
+console.log("✅ punishmentsSenescal handler carregado");
+
 const { Events, EmbedBuilder, AuditLogEvent } = require("discord.js");
 const { SENESCAL_ID } = require("../config");
 const { findAuditExecutor } = require("../utils/audit");
