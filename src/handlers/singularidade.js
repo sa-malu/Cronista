@@ -6,10 +6,17 @@ const {
   ButtonStyle,
 } = require("discord.js");
 
-const { CARGO_VERIFICADO } = require("../config");
+const { CARGO_VERIFICADO, VEU_CHANNEL_ID } = require("../config");
 const { isAboveBot } = require("../utils/perms");
 
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 module.exports = function registerSingularidade(client) {
+  // =============================
+  // !singularidade
+  // =============================
   client.on(Events.MessageCreate, async (message) => {
     if (!message.guild) return;
     if (message.author.bot) return;
@@ -60,14 +67,67 @@ Toque o selo abaixo e atravesse.`
     await message.delete().catch(() => {});
   });
 
+  // =============================
+  // Botão: atravessar + mensagem no #veu
+  // =============================
   client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     if (!interaction.inGuild()) return;
     if (interaction.customId !== "atravessar_veu") return;
 
     await interaction.deferUpdate().catch(() => {});
-    if (interaction.member.roles.cache.has(CARGO_VERIFICADO)) return;
 
-    await interaction.member.roles.add(CARGO_VERIFICADO).catch(() => {});
+    const guild = interaction.guild;
+    const member = interaction.member;
+
+    // Canal #veu (fixo)
+    const veuChannelId = VEU_CHANNEL_ID || interaction.channelId;
+    const veuChannel = await guild.channels.fetch(veuChannelId).catch(() => null);
+    if (!veuChannel) return;
+
+    const userMention = `<@${member.id}>`;
+
+    const textosPrimeiraVez = [
+      `${userMention} tocou o selo… e o Véu cedeu como névoa antiga.`,
+      `${userMention} atravessou. A Margem registrou o primeiro passo.`,
+      `O Véu se rasgou por um instante. ${userMention} agora existe na história.`,
+      `${userMention} contemplou as Singularidades — e o mundo respondeu.`,
+      `Um nome foi escrito no limiar: ${userMention}.`,
+      `${userMention} ouviu o chamado do outro lado. E foi aceito.`,
+      `A realidade piscou. ${userMention} passou.`,
+      `${userMention} atravessou o Véu. Não há retorno para quem viu.`,
+    ];
+
+    const textosJaTinha = [
+      `${userMention} encostou no selo de novo… como quem testa uma cicatriz.`,
+      `${userMention} já carrega o selo. Ainda assim, o Véu observou.`,
+      `${userMention} retorna ao limiar. A Margem não esquece.`,
+      `O selo de ${userMention} já existe. O gesto, ainda assim, ecoa.`,
+    ];
+
+    // Se já tinha cargo
+    if (member.roles.cache.has(CARGO_VERIFICADO)) {
+      const embed = new EmbedBuilder()
+        .setColor("#444444")
+        .setTitle("✦ O Véu Reconhece ✦")
+        .setDescription(pick(textosJaTinha))
+        .setFooter({ text: "Margem • Travessia já registrada" });
+
+      await veuChannel.send({ embeds: [embed] }).catch(() => {});
+      return;
+    }
+
+    // Dá o cargo
+    await member.roles.add(CARGO_VERIFICADO).catch(() => {});
+
+    // Mensagem no #veu
+    const embed = new EmbedBuilder()
+      .setColor("#1E8E3E")
+      .setTitle("✦ Véu Atravessado ✦")
+      .setDescription(pick(textosPrimeiraVez))
+      .addFields({ name: "Selo", value: `<@&${CARGO_VERIFICADO}>`, inline: false })
+      .setFooter({ text: "Margem • Uma travessia ocorreu" });
+
+    await veuChannel.send({ embeds: [embed] }).catch(() => {});
   });
 };
