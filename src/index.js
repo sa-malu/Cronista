@@ -11,8 +11,9 @@ const registerWarnsFeed = require("./handlers/warnsFeed");
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,      // ✅ obrigatório pra delete/update
+    GatewayIntentBits.GuildMembers,       // kick/timeout (member update/remove)
+    GatewayIntentBits.GuildModeration,    // ✅ ban/unban e eventos de moderação
+    GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
   ],
@@ -32,3 +33,4 @@ registerPunishmentsSenescal(client);
 registerWarnsFeed(client);
 
 client.login(TOKEN);
+
