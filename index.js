@@ -371,14 +371,14 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       callTimes.delete(member.id);
     }
 
-    const embed = new EmbedBuilder()
-      let cor = "#111111";
+    let cor = "#111111";
 
-      if (!oldChannel && newChannel) cor = "#1E8E3E"; // entrou
-      else if (oldChannel && !newChannel) cor = "#5B2C83"; // saiu
-      else if (oldChannel && newChannel) cor = "#1B4F72"; // moveu
-      .setColor(cor)
+    if (!oldChannel && newChannel) cor = "#1E8E3E"; // entrou
+    else if (oldChannel && !newChannel) cor = "#5B2C83"; // saiu
+    else if (oldChannel && newChannel) cor = "#1B4F72"; // moveu
+    const embed = new EmbedBuilder()
       
+      .setColor(cor)
       .setTitle("🔊 Registro: Movimento em Voz")
       .addFields({ name: "Usuário", value: userLine, inline: false })
       .setTimestamp()
@@ -487,6 +487,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 });
 
 client.login(TOKEN);
+
 
 
 
