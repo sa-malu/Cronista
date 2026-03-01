@@ -1,11 +1,12 @@
-console.log("✅ messageLogs handler carregado");
-
 const { Events, EmbedBuilder, AuditLogEvent } = require("discord.js");
+
 const { cacheMessage, getCached } = require("../utils/cache");
 const { sendLog } = require("../utils/send");
 const { findAuditExecutor } = require("../utils/audit");
 
 module.exports = function registerMessageLogs(client) {
+  console.log("✅ messageLogs handler carregado");
+
   client.on(Events.MessageCreate, (message) => {
     if (!message.guild) return;
     if (message.author?.bot) return;
@@ -13,119 +14,99 @@ module.exports = function registerMessageLogs(client) {
   });
 
   client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
-    console.log("✏️ UPDATE EVENT", {
-      guild: !!newMessage.guild,
-      channelId: newMessage.channelId,
-      authorId: newMessage.author?.id,
-      oldPartial: oldMessage.partial,
-      newPartial: newMessage.partial
-    });
-    if (!newMessage.guild) return;
-    if (newMessage.author?.bot) return;
+    try {
+      if (!newMessage.guild) return;
+      if (newMessage.author?.bot) return;
 
-    const before = (oldMessage.content ?? getCached(oldMessage.id)?.content ?? "").trim();
-    const after = (newMessage.content ?? "").trim();
+      const before = (oldMessage.content ?? getCached(oldMessage.id)?.content ?? "").trim();
+      const after = (newMessage.content ?? "").trim();
 
-    cacheMessage(newMessage);
+      cacheMessage(newMessage);
 
-    if (before === after) return;
+      if (before === after) return;
 
-    const embed = new EmbedBuilder()
-      .setColor("#C27C0E") // edit = laranja
-      .setTitle("✏️ Registro: Mensagem Editada")
-      .addFields(
-        { name: "Canal", value: `<#${newMessage.channelId}>`, inline: true },
-        { name: "Autor", value: `<@${newMessage.author.id}> (${newMessage.author.tag})`, inline: true },
-        { name: "O que foi modificado", value: "Conteúdo textual foi alterado.", inline: false },
-        { name: "Antes", value: before.length ? before.slice(0, 1024) : "*vazio*", inline: false },
-        { name: "Depois", value: after.length ? after.slice(0, 1024) : "*vazio*", inline: false }
-      )
-      .setTimestamp()
-      .setFooter({ text: "Margem • Alteração registrada" });
+      const embed = new EmbedBuilder()
+        .setColor("#C27C0E")
+        .setTitle("✏️ Registro: Mensagem Editada")
+        .addFields(
+          { name: "Canal", value: `<#${newMessage.channelId}>`, inline: true },
+          { name: "Autor", value: `<@${newMessage.author.id}> (${newMessage.author.tag})`, inline: true },
+          { name: "O que foi modificado", value: "Conteúdo textual foi alterado.", inline: false },
+          { name: "Antes", value: before.length ? before.slice(0, 1024) : "*vazio*", inline: false },
+          { name: "Depois", value: after.length ? after.slice(0, 1024) : "*vazio*", inline: false }
+        )
+        .setTimestamp()
+        .setFooter({ text: "Margem • Alteração registrada" });
 
-    if (newMessage.url) embed.addFields({ name: "Link", value: newMessage.url, inline: false });
+      if (newMessage.url) embed.addFields({ name: "Link", value: newMessage.url, inline: false });
 
-    await sendLog(newMessage.guild, embed);
+      await sendLog(newMessage.guild, embed);
+    } catch (e) {
+      console.error("Erro em MessageUpdate:", e);
+    }
   });
 
   client.on(Events.MessageDelete, async (message) => {
-  if (!message.guild) return;
-  if (message.author?.bot) return;
+    try {
+      if (!message.guild) return;
+      if (message.author?.bot) return;
 
-  const cached = getCached(message.id);
+      const cached = getCached(message.id);
 
-  const authorId = message.author?.id || cached?.authorId;
-  const authorTag = message.author?.tag || cached?.authorTag || "Desconhecido";
-  const content = (message.content ?? cached?.content ?? "").trim();
+      const authorId = message.author?.id || cached?.authorId;
+      const authorTag = message.author?.tag || cached?.authorTag || "Desconhecido";
+      const content = (message.content ?? cached?.content ?? "").trim();
+      const attachments = cached?.attachments ?? [];
 
-  // 🔐 PROTEÇÃO DO AUDIT LOG AQUI
-  let executor = null;
-
-  try {
-    executor = await findAuditExecutor(
-      message.guild,
-      AuditLogEvent.MessageDelete,
-      authorId
-    );
-  } catch (e) {
-    console.error("Erro ao buscar audit log:", e);
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor("#8B0000")
-    .setTitle("🗑️ Registro: Mensagem Excluída")
-    .addFields(
-      { name: "Canal", value: `<#${message.channelId}>`, inline: true },
-      {
-        name: "Autor",
-        value: authorId
-          ? `<@${authorId}> (${authorTag})`
-          : authorTag,
-        inline: true,
+      // Audit log pode falhar se não tiver permissão, então protegemos
+      let executor = null;
+      if (authorId) {
+        try {
+          executor = await findAuditExecutor(message.guild, AuditLogEvent.MessageDelete, authorId);
+        } catch (e) {
+          console.error("Erro ao buscar audit log:", e);
+        }
       }
-    )
-    .setTimestamp()
-    .setFooter({ text: "Margem • Exclusão registrada" });
 
-  if (executor?.executorId) {
-    if (executor.executorId === authorId) {
-      embed.addFields({
-        name: "Ação",
-        value: "O usuário apagou a própria mensagem.",
-        inline: false,
-      });
-    } else {
-      embed.addFields({
-        name: "Ação",
-        value: `<@${executor.executorId}> (${executor.executorTag}) apagou a mensagem deste autor.`,
-        inline: false,
-      });
+      const embed = new EmbedBuilder()
+        .setColor("#8B0000")
+        .setTitle("🗑️ Registro: Mensagem Excluída")
+        .addFields(
+          { name: "Canal", value: `<#${message.channelId}>`, inline: true },
+          { name: "Autor", value: authorId ? `<@${authorId}> (${authorTag})` : authorTag, inline: true }
+        )
+        .setTimestamp()
+        .setFooter({ text: "Margem • Exclusão registrada" });
+
+      if (executor?.executorId && authorId) {
+        if (executor.executorId === authorId) {
+          embed.addFields({ name: "Ação", value: "O usuário apagou a própria mensagem.", inline: false });
+        } else {
+          embed.addFields({
+            name: "Ação",
+            value: `<@${executor.executorId}> (${executor.executorTag}) apagou a mensagem deste autor.`,
+            inline: false,
+          });
+        }
+        if (executor.reason) embed.addFields({ name: "Motivo (Audit Log)", value: executor.reason, inline: false });
+      } else {
+        embed.addFields({ name: "Ação", value: "Mensagem apagada (executor não identificável).", inline: false });
+      }
+
+      if (content.length) {
+        embed.addFields({ name: "Mensagem", value: content.slice(0, 1024), inline: false });
+      } else {
+        embed.addFields({ name: "Mensagem", value: "*Conteúdo indisponível.*", inline: false });
+      }
+
+      if (attachments.length) {
+        const list = attachments.slice(0, 5).map((a) => `• [${a.name}](${a.url})`).join("\n");
+        embed.addFields({ name: "Anexos", value: list, inline: false });
+      }
+
+      await sendLog(message.guild, embed);
+    } catch (e) {
+      console.error("Erro em MessageDelete:", e);
     }
-  } else {
-    embed.addFields({
-      name: "Ação",
-      value: "Mensagem apagada (executor não identificável).",
-      inline: false,
-    });
-  }
-
-  if (content.length) {
-    embed.addFields({
-      name: "Mensagem",
-      value: content.slice(0, 1024),
-      inline: false,
-    });
-  } else {
-    embed.addFields({
-      name: "Mensagem",
-      value: "*Conteúdo indisponível.*",
-      inline: false,
-    });
-  }
-
-  try {
-    await sendLog(message.guild, embed);
-  } catch (e) {
-    console.error("Erro ao enviar log:", e);
-  }
-});
+  });
+};
