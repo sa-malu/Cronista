@@ -1,9 +1,9 @@
 console.log("✅ messageLogs handler carregado");
 
 const { Events, EmbedBuilder, AuditLogEvent } = require("discord.js");
-const { cacheMessage, getCached } = require("../utils/cache");
-const { sendLog } = require("../utils/send");
-const { findAuditExecutor } = require("../utils/audit");
+const { cacheMessage, getCached } = require("../utils/cache.js");
+const { sendLog } = require("../utils/send.js");
+const { findAuditExecutor } = require("../utils/audit.js");
 
 module.exports = function registerMessageLogs(client) {
   client.on(Events.MessageCreate, (message) => {
