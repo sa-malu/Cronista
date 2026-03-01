@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
 const { TOKEN } = require("./config");
 
 const registerSingularidade = require("./handlers/singularidade");
@@ -12,21 +12,21 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessages,      // ✅ obrigatório pra delete/update
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
   ],
   partials: [Partials.Channel, Partials.Message],
 });
 
-client.once("ready", () => {
+client.once(Events.ClientReady, () => {
   console.log(`📜 Cronista online como ${client.user.tag}`);
 });
 
-// handlers
+// ✅ handlers (tem que chamar)
 registerSingularidade(client);
 registerEscrituras(client);
-registerMessageLogs(client);
+registerMessageLogs(client);          // ✅ ESTE é o que tá faltando aí
 registerVoiceLogs(client);
 registerPunishmentsSenescal(client);
 registerWarnsFeed(client);
