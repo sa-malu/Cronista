@@ -49,71 +49,83 @@ module.exports = function registerMessageLogs(client) {
   });
 
   client.on(Events.MessageDelete, async (message) => {
-    console.log("🗑️ DELETE EVENT", {
-      guild: !!message.guild,
-      channelId: message.channelId,
-      authorId: message.author?.id,
-      partial: message.partial
-    });
-    if (!message.guild) return;
-    if (message.author?.bot) return;
+  if (!message.guild) return;
+  if (message.author?.bot) return;
 
-    const cached = getCached(message.id);
+  const cached = getCached(message.id);
 
-    const authorId = message.author?.id || cached?.authorId;
-    const authorTag = message.author?.tag || cached?.authorTag || "Desconhecido";
-    const content = (message.content ?? cached?.content ?? "").trim();
-    const attachments = cached?.attachments ?? [];
+  const authorId = message.author?.id || cached?.authorId;
+  const authorTag = message.author?.tag || cached?.authorTag || "Desconhecido";
+  const content = (message.content ?? cached?.content ?? "").trim();
 
-    // tenta identificar executor
-    let executor = null;
+  // 🔐 PROTEÇÃO DO AUDIT LOG AQUI
+  let executor = null;
 
-    try {
-      executor = await findAuditExecutor(
-        message.guild,
-        AuditLogEvent.MessageDelete,
-        authorId
-      );
-    } catch (e) {
-      console.error("Erro ao buscar audit log:", e);
-    }
+  try {
+    executor = await findAuditExecutor(
+      message.guild,
+      AuditLogEvent.MessageDelete,
+      authorId
+    );
+  } catch (e) {
+    console.error("Erro ao buscar audit log:", e);
+  }
 
-    const embed = new EmbedBuilder()
-      .setColor("#8B0000") // delete = vermelho
-      .setTitle("🗑️ Registro: Mensagem Excluída")
-      .addFields(
-        { name: "Canal", value: `<#${message.channelId}>`, inline: true },
-        { name: "Autor", value: authorId ? `<@${authorId}> (${authorTag})` : authorTag, inline: true }
-      )
-      .setTimestamp()
-      .setFooter({ text: "Margem • Exclusão registrada" });
-
-    if (executor?.executorId) {
-      if (executor.executorId === authorId) {
-        embed.addFields({ name: "Ação", value: "O usuário apagou a própria mensagem.", inline: false });
-      } else {
-        embed.addFields({
-          name: "Ação",
-          value: `<@${executor.executorId}> (${executor.executorTag}) apagou a mensagem deste autor.`,
-          inline: false,
-        });
+  const embed = new EmbedBuilder()
+    .setColor("#8B0000")
+    .setTitle("🗑️ Registro: Mensagem Excluída")
+    .addFields(
+      { name: "Canal", value: `<#${message.channelId}>`, inline: true },
+      {
+        name: "Autor",
+        value: authorId
+          ? `<@${authorId}> (${authorTag})`
+          : authorTag,
+        inline: true,
       }
-      if (executor.reason) embed.addFields({ name: "Motivo (Audit Log)", value: executor.reason, inline: false });
+    )
+    .setTimestamp()
+    .setFooter({ text: "Margem • Exclusão registrada" });
+
+  if (executor?.executorId) {
+    if (executor.executorId === authorId) {
+      embed.addFields({
+        name: "Ação",
+        value: "O usuário apagou a própria mensagem.",
+        inline: false,
+      });
     } else {
-      embed.addFields({ name: "Ação", value: "Mensagem apagada (executor não identificável).", inline: false });
+      embed.addFields({
+        name: "Ação",
+        value: `<@${executor.executorId}> (${executor.executorTag}) apagou a mensagem deste autor.`,
+        inline: false,
+      });
     }
+  } else {
+    embed.addFields({
+      name: "Ação",
+      value: "Mensagem apagada (executor não identificável).",
+      inline: false,
+    });
+  }
 
-    if (content.length) {
-      embed.addFields({ name: "Mensagem", value: content.slice(0, 1024), inline: false });
-    } else {
-      embed.addFields({ name: "Mensagem", value: "*Conteúdo indisponível (não estava em cache).*", inline: false });
-    }
+  if (content.length) {
+    embed.addFields({
+      name: "Mensagem",
+      value: content.slice(0, 1024),
+      inline: false,
+    });
+  } else {
+    embed.addFields({
+      name: "Mensagem",
+      value: "*Conteúdo indisponível.*",
+      inline: false,
+    });
+  }
 
-    if (attachments.length) {
-      const list = attachments.slice(0, 5).map((a) => `• [${a.name}](${a.url})`).join("\n");
-      embed.addFields({ name: "Anexos", value: list, inline: false });
-    }
-
+  try {
     await sendLog(message.guild, embed);
-  });
-};
+  } catch (e) {
+    console.error("Erro ao enviar log:", e);
+  }
+});
