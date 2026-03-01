@@ -67,8 +67,15 @@ module.exports = function registerMessageLogs(client) {
 
     // tenta identificar executor
     let executor = null;
-    if (authorId) {
-      executor = await findAuditExecutor(message.guild, AuditLogEvent.MessageDelete, authorId).catch(() => null);
+
+    try {
+      executor = await findAuditExecutor(
+        message.guild,
+        AuditLogEvent.MessageDelete,
+        authorId
+      );
+    } catch (e) {
+      console.error("Erro ao buscar audit log:", e);
     }
 
     const embed = new EmbedBuilder()
